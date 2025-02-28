@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+    <title>容器布局应用 - 改进版</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      html,
+      body {
+        overscroll-behavior-y: auto;
+        height: auto;
+        position: relative;
+      }
+
+      body {
+        font-family: "Arial", sans-serif;
+        line-height: 1.6;
+        color: #333;
+        background-color: #f5f5f5;
+        padding: 30px;
+        height: auto;
+        min-height: 100%;
+        position: relative;
+        overflow-y: auto; /* Allow scrolling */
+        -webkit-overflow-scrolling: touch; /* Enable momentum scrolling on iOS */
+      }
+
+      .app-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        /* Remove any fixed positioning that might prevent scrolling */
+        position: relative;
+        overflow: visible;
+      }
+
+      .header {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+      .controls-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        background-color: #fff;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .control-group {
+        flex: 1;
+        min-width: 300px;
+      }
+      .control-group h3 {
+        margin-bottom: 10px;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 5px;
+      }
+      .form-group {
+        margin-bottom: 10px;
+      }
+      .button-group {
+        display: flex;
+        gap: 10px;
+        width: 100%;
+      }
+      .button-group > button {
+        flex: 1;
+      }
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+      }
+      input,
+      button,
+      select {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+      button {
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        cursor: pointer;
+        font-weight: bold;
+      }
+      button:hover {
+        background-color: #45a049;
+      }
+      button:disabled {
+        background-color: #aaa;
+        cursor: not-allowed;
+      }
+      .container-list {
+        max-height: 200px;
+        overflow-y: auto;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        margin-top: 10px;
+      }
+      .container-item {
+        padding: 10px;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 14px;
+      }
+      .container-item:last-child {
+        border-bottom: none;
+      }
+      .container-item > div:first-child {
+        /* 当宽度不足时，名称和尺寸分两行 */
+        word-break: break-all;
+      }
+      .container-item button {
+        width: auto;
+        padding: 5px 8px;
+        margin-left: 10px;
+      }
+      /* 画布区域 */
+      #canvas-wrapper {
+        width: 100%;
+        margin: 20px auto;
+        padding: 20px;
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        position: relative;
+        z-index: 1;
+        touch-action: pan-x pan-y; /* Allow panning on touch devices */
+      }
+      /* 画布容器 */
+      .canvas-container {
+        position: relative;
+        background-color: #fff;
+        border: 2px dashed #ccc;
+        overflow: visible;
+        touch-action: none;
+        margin: 0 auto;
+      }
+      /* 画布尺寸文字显示 */
+      .canvas-dim-text {
+        font-size: 16px;
+        font-weight: bold;
+        text-align: center;
+        margin-bottom: 10px;
+      }
+      /* 画布中的实例 */
+      .container-box {
+        position: absolute;
+        cursor: move;
+        user-select: none;
+        touch-action: none;
+      }
+      /* 内部结构 */
+      .rotatable {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border: 2px solid rgba(70, 130, 180, 0.9);
+        background-color: rgba(100, 150, 200, 0.7);
+        box-sizing: border-box;
+      }
+      .container-info {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+        white-space: normal;
+        text-align: center;
+        overflow: hidden;
+        box-sizing: border-box;
+        word-break: break-word;
+      }
+      /* 操作菜单 */
+      .context-menu {
+        position: absolute;
+        top: calc(100% + 5px);
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #fff;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        padding: 5px;
+        z-index: 100;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        white-space: nowrap;
+      }
+      .context-menu button {
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        cursor: pointer;
+        padding: 5px;
+        border-radius: 3px;
+      }
+      .context-menu button:hover {
+        background-color: #45a049;
+      }
+      /* 距离显示 */
+      .distance-info {
+        position: absolute;
+        pointer-events: none;
+      }
+      .distance-label {
+        position: absolute;
+        font-size: 12px;
+        color: black;
+        font-weight: bold;
+        background-color: rgba(255, 255, 255, 0.8);
+        padding: 2px 4px;
+        white-space: nowrap;
+        z-index: 200;
+      }
+      /* 重叠区域覆盖层：半透明红色 */
+      .overlap-overlay {
+        position: absolute;
+        background-color: rgba(255, 0, 0, 0.5);
+        pointer-events: none;
+        z-index: 50;
+      }
+      /* 手机适配：缩小输入框、按钮和容器库文字 */
+      @media (max-width: 768px) {
+        .controls-container {
+          flex-direction: column;
+        }
+        .control-group {
+          width: 100%;
+        }
+        .container-item {
+          font-size: 12px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-container">
+      <div class="header">
+        <h1>容器布局应用 - 改进版</h1>
+        <p>设置画布和容器尺寸（单位：cm），拖拽或点击容器弹出菜单进行旋转（交换尺寸）和删除；支持保存、加载、撤销和重做操作</p>
+      </div>
+
+      <div class="controls-container">
+        <div class="control-group">
+          <h3>画布设置</h3>
+          <div class="form-group">
+            <label for="canvas-width">画布宽度 (cm)</label>
+            <input type="number" id="canvas-width" min="1" step="0.1" value="63.5" />
+          </div>
+          <div class="form-group">
+            <label for="canvas-height">画布高度 (cm)</label>
+            <input type="number" id="canvas-height" min="1" step="0.1" value="48.5" />
+          </div>
+          <div class="form-group button-group">
+            <button id="update-canvas">更新画布</button>
+          </div>
+          <div class="form-group button-group">
+            <button id="save-layout">保存布局</button>
+            <button id="load-layout">加载布局</button>
+          </div>
+          <div class="form-group button-group">
+            <button id="undo-button">撤销</button>
+            <button id="redo-button">重做</button>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <h3>添加容器</h3>
+          <div class="form-group">
+            <label for="container-name">容器名称</label>
+            <input type="text" id="container-name" placeholder="例如：书本A" />
+          </div>
+          <div class="form-group">
+            <label for="container-width">容器宽度 (cm)</label>
+            <input type="number" id="container-width" min="0.1" step="0.1" value="5" />
+          </div>
+          <div class="form-group">
+            <label for="container-height">容器高度 (cm)</label>
+            <input type="number" id="container-height" min="0.1" step="0.1" value="5" />
+          </div>
+          <div class="form-group button-group">
+            <button id="add-container">添加到容器库</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="palette-container">
+        <h3>容器库</h3>
+        <p>点击“添加到画布”可多次添加；在容器库中删除模板时，画布中所有该模板实例将同步删除</p>
+        <div id="container-list" class="container-list"></div>
+      </div>
+
+      <!-- 画布尺寸文字显示区域 -->
+      <div id="canvas-dim-text" class="canvas-dim-text"></div>
+
+      <div id="canvas-wrapper">
+        <div id="canvas" class="canvas-container">
+          <!-- 用于绘制距离虚线 -->
+          <div class="distance-info top-info"></div>
+          <div class="distance-info right-info"></div>
+          <div class="distance-info bottom-info"></div>
+          <div class="distance-info left-info"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        // 元素引用
+        const canvasWidthInput = document.getElementById("canvas-width");
+        const canvasHeightInput = document.getElementById("canvas-height");
+        const updateCanvasButton = document.getElementById("update-canvas");
+        const containerNameInput = document.getElementById("container-name");
+        const containerWidthInput = document.getElementById("container-width");
+        const containerHeightInput = document.getElementById("container-height");
+        const addContainerButton = document.getElementById("add-container");
+        const containerListElement = document.getElementById("container-list");
+        const canvasElement = document.getElementById("canvas");
+        const canvasWrapper = document.getElementById("canvas-wrapper");
+        const canvasDimText = document.getElementById("canvas-dim-text");
+        const saveLayoutButton = document.getElementById("save-layout");
+        const loadLayoutButton = document.getElementById("load-layout");
+        const undoButton = document.getElementById("undo-button");
+        const redoButton = document.getElementById("redo-button");
+        const distanceInfos = {
+          top: document.querySelector(".top-info"),
+          right: document.querySelector(".right-info"),
+          bottom: document.querySelector(".bottom-info"),
+          left: document.querySelector(".left-info"),
+        };
+
+        // ---------------------------
+        // 本版本取消所有重叠检测与空间不足判断，仅保留自动吸附
+        // ---------------------------
+
+        // 辅助函数：自动吸附，如果与其他容器边缘距离小于snap，则自动贴边，最终取整
+        function snapPositionCandidate(candidateLeft, candidateTop, candidateWidth, candidateHeight) {
+          const snap = 5;
+          // Round the input values to ensure consistent calculations
+          candidateLeft = Math.round(candidateLeft);
+          candidateTop = Math.round(candidateTop);
+
+          activeContainers.forEach((c) => {
+            const otherLeft = Math.round(c.element.offsetLeft);
+            const otherTop = Math.round(c.element.offsetTop);
+            const otherRight = otherLeft + Math.round(c.element.offsetWidth);
+            const otherBottom = otherTop + Math.round(c.element.offsetHeight);
+
+            // Snap left edge to other right edge
+            if (Math.abs(candidateLeft - otherRight) <= snap) {
+              candidateLeft = otherRight;
+            }
+            // Snap right edge to other left edge
+            if (Math.abs(candidateLeft + candidateWidth - otherLeft) <= snap) {
+              candidateLeft = otherLeft - candidateWidth;
+            }
+            // Snap top edge to other bottom edge
+            if (Math.abs(candidateTop - otherBottom) <= snap) {
+              candidateTop = otherBottom;
+            }
+            // Snap bottom edge to other top edge
+            if (Math.abs(candidateTop + candidateHeight - otherTop) <= snap) {
+              candidateTop = otherTop - candidateHeight;
+            }
+          });
+
+          // Snap to canvas edges
+          if (candidateLeft <= snap) candidateLeft = 0;
+          if (candidateTop <= snap) candidateTop = 0;
+          if (Math.abs(candidateLeft + candidateWidth - canvasElement.offsetWidth) <= snap) {
+            candidateLeft = canvasElement.offsetWidth - candidateWidth;
+          }
+          if (Math.abs(candidateTop + candidateHeight - canvasElement.offsetHeight) <= snap) {
+            candidateTop = canvasElement.offsetHeight - candidateHeight;
+          }
+
+          return {
+            // Ensure we return exactly rounded values to prevent subpixel gaps
+            left: Math.round(candidateLeft),
+            top: Math.round(candidateTop),
+          };
+        }
+
+        // 全局变量
+        let scale = 1; // 使画布宽度充满 canvasWrapper 的缩放比例
+        let containers = []; // 模板库，每项 { id, name, width, height }
+        let nextContainerId = 1;
+        let activeContainers = []; // 画布中的实例 { element, width, height }
+        let draggedElement = null;
+        let historyStack = [];
+        let redoStack = [];
+        let isRestoring = false;
+        const MAX_FONT_SIZE = 20;
+
+        updateCanvas();
+        saveState();
+
+        updateCanvasButton.addEventListener("click", updateCanvas);
+        addContainerButton.addEventListener("click", addContainerToPalette);
+        saveLayoutButton.addEventListener("click", saveLayout);
+        loadLayoutButton.addEventListener("click", loadLayout);
+        undoButton.addEventListener("click", undo);
+        redoButton.addEventListener("click", redo);
+        document.addEventListener("click", removeAllContextMenus);
+
+        function updateCanvas() {
+          const cw = parseFloat(canvasWidthInput.value);
+          const ch = parseFloat(canvasHeightInput.value);
+          if (isNaN(cw) || isNaN(ch) || cw <= 0 || ch <= 0) {
+            alert("请输入有效的画布尺寸");
+            return;
+          }
+          const wrapperWidth = canvasWrapper.clientWidth - 40;
+          scale = wrapperWidth / cw;
+          canvasElement.style.width = cw * scale + "px";
+          canvasElement.style.height = ch * scale + "px";
+          updateCanvasDimensions(cw, ch);
+          updateActiveContainers();
+          updateDistanceInfo();
+          saveState();
+        }
+        function updateCanvasDimensions(cw, ch) {
+          canvasDimText.innerText = `画布尺寸：${cw}cm × ${ch}cm`;
+        }
+        function addContainerToPalette() {
+          const name = containerNameInput.value.trim() || `容器${nextContainerId}`;
+          const w = parseFloat(containerWidthInput.value);
+          const h = parseFloat(containerHeightInput.value);
+          if (isNaN(w) || isNaN(h) || w <= 0 || h <= 0) {
+            alert("请输入有效的容器尺寸");
+            return;
+          }
+          const container = { id: nextContainerId++, name, width: w, height: h };
+          containers.push(container);
+          updateContainerList();
+          containerNameInput.value = "";
+        }
+        function updateContainerList() {
+          containerListElement.innerHTML = "";
+          if (containers.length === 0) {
+            containerListElement.innerHTML = '<div class="container-item">未添加容器</div>';
+            return;
+          }
+          containers.forEach((container) => {
+            // 名称和尺寸分为两行；按钮改为“＋”和“×”
+            const div = document.createElement("div");
+            div.className = "container-item";
+            div.innerHTML = `
+            <div><strong>${container.name}</strong><br>(${container.width}cm × ${container.height}cm)</div>
+            <div>
+              <button class="add-to-canvas" data-id="${container.id}">＋</button>
+              <button class="remove-container" data-id="${container.id}">×</button>
+            </div>
+          `;
+            containerListElement.appendChild(div);
+          });
+          document.querySelectorAll(".add-to-canvas").forEach((btn) => {
+            btn.addEventListener("click", function () {
+              const id = parseInt(this.getAttribute("data-id"));
+              addContainerToCanvas(id);
+            });
+          });
+          document.querySelectorAll(".remove-container").forEach((btn) => {
+            btn.addEventListener("click", function () {
+              const id = parseInt(this.getAttribute("data-id"));
+              removeContainerTemplate(id);
+            });
+          });
+        }
+        function removeContainerTemplate(containerId) {
+          containers = containers.filter((c) => c.id !== containerId);
+          activeContainers = activeContainers.filter((item) => {
+            if (item.element.dataset.containerId == containerId) {
+              canvasElement.removeChild(item.element);
+              return false;
+            }
+            return true;
+          });
+          updateContainerList();
+          updateDistanceInfo();
+          saveState();
+        }
+        // 添加容器到画布时，不检测重叠，直接放置在画布中心（或指定位置）后执行吸附
+        function addContainerToCanvas(containerId, left, top, rotated) {
+          const container = containers.find((c) => c.id === containerId);
+          if (!container) return;
+
+          const wPx = Math.round(container.width * scale);
+          const hPx = Math.round(container.height * scale);
+          rotated = rotated === "true" ? "true" : "false";
+
+          let newWidth = rotated === "true" ? hPx : wPx;
+          let newHeight = rotated === "true" ? wPx : hPx;
+
+          if (left === undefined || top === undefined) {
+            left = Math.round((canvasElement.offsetWidth - newWidth) / 2);
+            top = Math.round((canvasElement.offsetHeight - newHeight) / 2);
+          }
+
+          let snapped = snapPositionCandidate(left, top, newWidth, newHeight);
+          left = snapped.left;
+          top = snapped.top;
+
+          const el = document.createElement("div");
+          el.className = "container-box";
+          el.dataset.containerId = container.id;
+          el.dataset.name = container.name;
+          el.dataset.width = container.width;
+          el.dataset.height = container.height;
+          el.dataset.rotated = rotated;
+
+          // Use exact pixel values with Math.round to avoid subpixel rendering issues
+          if (rotated === "true") {
+            el.style.width = Math.round(hPx) + "px";
+            el.style.height = Math.round(wPx) + "px";
+          } else {
+            el.style.width = Math.round(wPx) + "px";
+            el.style.height = Math.round(hPx) + "px";
+          }
+
+          el.style.left = Math.round(left) + "px";
+          el.style.top = Math.round(top) + "px";
+
+          el.innerHTML = `
+    <div class="rotatable"></div>
+    <div class="container-info">${container.name}<br>${container.width}×${container.height}cm</div>
+  `;
+
+          canvasElement.appendChild(el);
+          makeElementDraggable(el);
+
+          // For mobile: add touchend event to ensure menu popup
+          el.addEventListener("touchend", function (e) {
+            if (draggedElement) return;
+            e.stopPropagation();
+            removeAllContextMenus();
+            showContextMenu(el);
+          });
+
+          el.addEventListener("click", function (e) {
+            e.stopPropagation();
+            removeAllContextMenus();
+            showContextMenu(el);
+          });
+
+          activeContainers.push({ element: el, width: container.width, height: container.height });
+          updateFontSize(el);
+          updateDistanceInfo();
+          saveState();
+        }
+        // 拖拽功能：允许自由拖动，拖拽过程中和结束时均执行自动吸附
+        function makeElementDraggable(el) {
+          let pos1 = 0,
+            pos2 = 0,
+            pos3 = 0,
+            pos4 = 0;
+          el.onmousedown = dragMouseDown;
+          el.ontouchstart = dragTouchStart;
+          el.dataset.prevLeft = el.offsetLeft;
+          el.dataset.prevTop = el.offsetTop;
+
+          function dragMouseDown(e) {
+            e.preventDefault();
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            draggedElement = el;
+            document.onmouseup = closeDragElement;
+            document.onmousemove = elementDrag;
+          }
+
+          function dragTouchStart(e) {
+            pos3 = e.touches[0].clientX;
+            pos4 = e.touches[0].clientY;
+            draggedElement = el;
+
+            // Set a flag to determine if this is a drag or a scroll
+            el.dataset.touchStartTime = Date.now();
+            el.dataset.touchStartX = pos3;
+            el.dataset.touchStartY = pos4;
+
+            document.ontouchend = closeDragElement;
+            document.ontouchmove = elementTouchDrag;
+          }
+
+          function elementDrag(e) {
+            e.preventDefault();
+            pos1 = pos3 - e.clientX;
+            pos2 = pos4 - e.clientY;
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            moveElement();
+          }
+
+          function elementTouchDrag(e) {
+            // Determine if this is a drag or scroll
+            if (draggedElement) {
+              const touchStartTime = parseInt(el.dataset.touchStartTime);
+              const touchStartX = parseInt(el.dataset.touchStartX);
+              const touchStartY = parseInt(el.dataset.touchStartY);
+              const currentX = e.touches[0].clientX;
+              const currentY = e.touches[0].clientY;
+
+              // If it's been more than 100ms since touch start and moved more than 10px,
+              // consider it a drag and prevent default scrolling
+              const timeDiff = Date.now() - touchStartTime;
+              const distanceX = Math.abs(currentX - touchStartX);
+              const distanceY = Math.abs(currentY - touchStartY);
+
+              if (timeDiff > 100 && (distanceX > 10 || distanceY > 10)) {
+                e.preventDefault();
+                pos1 = pos3 - e.touches[0].clientX;
+                pos2 = pos4 - e.touches[0].clientY;
+                pos3 = e.touches[0].clientX;
+                pos4 = e.touches[0].clientY;
+                moveElement();
+              }
+            }
+          }
+
+          function moveElement() {
+            let newTop = el.offsetTop - pos2;
+            let newLeft = el.offsetLeft - pos1;
+
+            // Ensure the container stays within bounds
+            newTop = Math.max(0, Math.min(newTop, canvasElement.offsetHeight - el.offsetHeight));
+            newLeft = Math.max(0, Math.min(newLeft, canvasElement.offsetWidth - el.offsetWidth));
+
+            // Apply snapping with improved precision
+            let snapped = snapPositionCandidate(newLeft, newTop, el.offsetWidth, el.offsetHeight);
+            newLeft = snapped.left;
+            newTop = snapped.top;
+
+            // Apply exactly rounded values to prevent subpixel rendering issues
+            el.style.top = Math.round(newTop) + "px";
+            el.style.left = Math.round(newLeft) + "px";
+
+            el.dataset.prevLeft = newLeft;
+            el.dataset.prevTop = newTop;
+            updateDistanceInfo();
+          }
+
+          function closeDragElement() {
+            document.onmouseup = null;
+            document.onmousemove = null;
+            document.ontouchend = null;
+            document.ontouchmove = null;
+            let snapped = snapPositionCandidate(el.offsetLeft, el.offsetTop, el.offsetWidth, el.offsetHeight);
+            el.style.left = snapped.left + "px";
+            el.style.top = snapped.top + "px";
+            updateDistanceInfo();
+            draggedElement = null;
+            saveState();
+          }
+        }
+        function showContextMenu(el) {
+          const menu = document.createElement("div");
+          menu.className = "context-menu";
+          const name = el.dataset.name;
+          const origW = el.dataset.width;
+          const origH = el.dataset.height;
+          menu.innerHTML = `<div style="text-align:center; font-weight:bold;">${name}<br>(${origW}×${origH}cm)</div>
+          <button class="rotate-btn">↻</button>
+          <button class="delete-instance">×</button>`;
+          el.appendChild(menu);
+          menu.querySelector(".rotate-btn").addEventListener("click", function (e) {
+            e.stopPropagation();
+            toggleRotation(el);
+            removeAllContextMenus();
+            updateDistanceInfo();
+            saveState();
+          });
+          menu.querySelector(".delete-instance").addEventListener("click", function (e) {
+            e.stopPropagation();
+            removeContainerInstance(el);
+            removeAllContextMenus();
+            updateDistanceInfo();
+            saveState();
+          });
+        }
+        // 旋转操作：直接交换宽高，clamp到画布内后执行自动吸附，不进行重叠检测
+        function toggleRotation(el) {
+          const origW = parseFloat(el.dataset.width);
+          const origH = parseFloat(el.dataset.height);
+          const currentRotated = el.dataset.rotated === "true";
+          const newRotated = currentRotated ? "false" : "true";
+
+          let newWPx, newHPx;
+          if (newRotated === "true") {
+            newWPx = Math.round(origH * scale);
+            newHPx = Math.round(origW * scale);
+          } else {
+            newWPx = Math.round(origW * scale);
+            newHPx = Math.round(origH * scale);
+          }
+
+          const canvasW = canvasElement.offsetWidth,
+            canvasH = canvasElement.offsetHeight;
+
+          let curLeft = el.offsetLeft;
+          let curTop = el.offsetTop;
+
+          // Ensure the container stays within bounds after rotation
+          curLeft = Math.min(curLeft, Math.max(0, canvasW - newWPx));
+          curTop = Math.min(curTop, Math.max(0, canvasH - newHPx));
+
+          // Apply snapping with improved precision
+          let snapped = snapPositionCandidate(curLeft, curTop, newWPx, newHPx);
+          curLeft = snapped.left;
+          curTop = snapped.top;
+
+          // Apply exactly rounded values to prevent subpixel rendering issues
+          el.style.width = Math.round(newWPx) + "px";
+          el.style.height = Math.round(newHPx) + "px";
+          el.style.left = Math.round(curLeft) + "px";
+          el.style.top = Math.round(curTop) + "px";
+
+          el.dataset.rotated = newRotated;
+
+          let infoDiv = el.querySelector(".container-info");
+          if (newRotated === "true") {
+            infoDiv.innerHTML = `${el.dataset.name}<br>${origH}×${origW}cm`;
+          } else {
+            infoDiv.innerHTML = `${el.dataset.name}<br>${origW}×${origH}cm`;
+          }
+
+          updateFontSize(el);
+        }
+        function removeContainerInstance(el) {
+          activeContainers = activeContainers.filter((item) => {
+            if (item.element === el) {
+              canvasElement.removeChild(el);
+              return false;
+            }
+            return true;
+          });
+        }
+        function removeAllContextMenus() {
+          document.querySelectorAll(".context-menu").forEach((menu) => menu.remove());
+        }
+        function updateDistanceInfo() {
+          const canvasRect = canvasElement.getBoundingClientRect();
+          const wrapperRect = canvasWrapper.getBoundingClientRect();
+          const canvasOffsetLeft = canvasRect.left - wrapperRect.left;
+          const canvasOffsetTop = canvasRect.top - wrapperRect.top;
+          const canvasW = canvasRect.width;
+          const canvasH = canvasRect.height;
+          if (activeContainers.length === 0) {
+            distanceInfos.top.innerHTML = "";
+            distanceInfos.bottom.innerHTML = "";
+            distanceInfos.left.innerHTML = "";
+            distanceInfos.right.innerHTML = "";
+            return;
+          }
+          const svgFixedWidth = 40;
+          // 上侧
+          let topEl = activeContainers[0].element;
+          activeContainers.forEach((c) => {
+            if (c.element.offsetTop < topEl.offsetTop) topEl = c.element;
+          });
+          const containerTop = topEl.offsetTop;
+          const topCenterX = topEl.offsetLeft + topEl.offsetWidth / 2;
+          const topLineHeight = containerTop;
+          distanceInfos.top.style.left = topCenterX - svgFixedWidth / 2 + "px";
+          distanceInfos.top.style.top = "0px";
+          distanceInfos.top.style.width = svgFixedWidth + "px";
+          distanceInfos.top.style.height = topLineHeight + "px";
+          distanceInfos.top.innerHTML = `<svg width="${svgFixedWidth}" height="${topLineHeight}" xmlns="http://www.w3.org/2000/svg">
+          <line x1="${svgFixedWidth / 2}" y1="${topLineHeight}" x2="${svgFixedWidth / 2}" y2="0" stroke="black" stroke-dasharray="5,5" />
+        </svg>`;
+          let labelTop = document.getElementById("label-top");
+          if (!labelTop) {
+            labelTop = document.createElement("div");
+            labelTop.id = "label-top";
+            labelTop.className = "distance-label";
+            canvasWrapper.appendChild(labelTop);
+          }
+          labelTop.innerText = (containerTop / scale).toFixed(1) + "cm";
+          labelTop.style.left = canvasOffsetLeft + topCenterX - svgFixedWidth / 2 + "px";
+          labelTop.style.top = canvasOffsetTop - 25 + "px";
+
+          // 底侧
+          let bottomEl = activeContainers[0].element;
+          activeContainers.forEach((c) => {
+            let candidate = c.element.offsetTop + c.element.offsetHeight;
+            if (candidate > bottomEl.offsetTop + bottomEl.offsetHeight) {
+              bottomEl = c.element;
+            }
+          });
+          const containerBottom = bottomEl.offsetTop + bottomEl.offsetHeight;
+          const bottomCenterX = bottomEl.offsetLeft + bottomEl.offsetWidth / 2;
+          const bottomLineHeight = canvasH - containerBottom;
+          distanceInfos.bottom.style.left = bottomCenterX - svgFixedWidth / 2 + "px";
+          distanceInfos.bottom.style.top = containerBottom + "px";
+          distanceInfos.bottom.style.width = svgFixedWidth + "px";
+          distanceInfos.bottom.style.height = bottomLineHeight + "px";
+          distanceInfos.bottom.innerHTML = `<svg width="${svgFixedWidth}" height="${bottomLineHeight}" xmlns="http://www.w3.org/2000/svg">
+          <line x1="${svgFixedWidth / 2}" y1="0" x2="${svgFixedWidth / 2}" y2="${bottomLineHeight}" stroke="black" stroke-dasharray="5,5" />
+        </svg>`;
+          let labelBottom = document.getElementById("label-bottom");
+          if (!labelBottom) {
+            labelBottom = document.createElement("div");
+            labelBottom.id = "label-bottom";
+            labelBottom.className = "distance-label";
+            canvasWrapper.appendChild(labelBottom);
+          }
+          labelBottom.innerText = (bottomLineHeight / scale).toFixed(1) + "cm";
+          labelBottom.style.left = canvasOffsetLeft + bottomCenterX - svgFixedWidth / 2 + "px";
+          labelBottom.style.top = canvasOffsetTop + canvasH + 5 + "px";
+
+          // 左侧
+          let leftEl = activeContainers[0].element;
+          activeContainers.forEach((c) => {
+            if (c.element.offsetLeft < leftEl.offsetLeft) leftEl = c.element;
+          });
+          const containerLeft = leftEl.offsetLeft;
+          const leftCenterY = leftEl.offsetTop + leftEl.offsetHeight / 2;
+          const leftLineWidth = containerLeft;
+          distanceInfos.left.style.left = "0px";
+          distanceInfos.left.style.top = leftCenterY - svgFixedWidth / 2 + "px";
+          distanceInfos.left.style.width = leftLineWidth + "px";
+          distanceInfos.left.style.height = svgFixedWidth + "px";
+          distanceInfos.left.innerHTML = `<svg width="${leftLineWidth}" height="${svgFixedWidth}" xmlns="http://www.w3.org/2000/svg">
+          <line x1="${leftLineWidth}" y1="${svgFixedWidth / 2}" x2="0" y2="${svgFixedWidth / 2}" stroke="black" stroke-dasharray="5,5" />
+        </svg>`;
+          let labelLeft = document.getElementById("label-left");
+          if (!labelLeft) {
+            labelLeft = document.createElement("div");
+            labelLeft.id = "label-left";
+            labelLeft.className = "distance-label";
+            canvasWrapper.appendChild(labelLeft);
+          }
+          labelLeft.innerText = (containerLeft / scale).toFixed(1) + "cm";
+          labelLeft.style.left = canvasOffsetLeft - svgFixedWidth - 5 + "px";
+          labelLeft.style.top = canvasOffsetTop + leftCenterY - 10 + "px";
+
+          // 右侧
+          let rightEl;
+          let maxRight = 0;
+          activeContainers.forEach((c) => {
+            const candidate = c.element.getBoundingClientRect().right - canvasRect.left;
+            if (candidate > maxRight) {
+              maxRight = candidate;
+              rightEl = c.element;
+            }
+          });
+          const containerRight = maxRight;
+          const rightCenterY = rightEl.offsetTop + rightEl.offsetHeight / 2;
+          const rightLineWidth = canvasW - containerRight;
+          distanceInfos.right.style.left = containerRight + "px";
+          distanceInfos.right.style.top = rightCenterY - svgFixedWidth / 2 + "px";
+          distanceInfos.right.style.width = rightLineWidth + "px";
+          distanceInfos.right.style.height = svgFixedWidth + "px";
+          distanceInfos.right.innerHTML = `<svg width="${rightLineWidth}" height="${svgFixedWidth}" xmlns="http://www.w3.org/2000/svg">
+          <line x1="0" y1="${svgFixedWidth / 2}" x2="${rightLineWidth}" y2="${svgFixedWidth / 2}" stroke="black" stroke-dasharray="5,5" />
+        </svg>`;
+          let labelRight = document.getElementById("label-right");
+          if (!labelRight) {
+            labelRight = document.createElement("div");
+            labelRight.id = "label-right";
+            labelRight.className = "distance-label";
+            canvasWrapper.appendChild(labelRight);
+          }
+          labelRight.innerText = (rightLineWidth / scale).toFixed(1) + "cm";
+          labelRight.style.left = canvasOffsetLeft + canvasW + 5 + "px";
+          labelRight.style.top = canvasOffsetTop + rightCenterY - 10 + "px";
+
+          // 更新重叠区域覆盖层
+          updateOverlapOverlays();
+        }
+
+        // 检测所有容器两两重叠，并在 canvas 内添加红色半透明覆盖层
+        function updateOverlapOverlays() {
+          // 清除已有覆盖层
+          const oldOverlays = canvasElement.querySelectorAll(".overlap-overlay");
+          oldOverlays.forEach((o) => o.remove());
+          for (let i = 0; i < activeContainers.length; i++) {
+            for (let j = i + 1; j < activeContainers.length; j++) {
+              const el1 = activeContainers[i].element;
+              const el2 = activeContainers[j].element;
+              const rect1 = {
+                left: el1.offsetLeft,
+                top: el1.offsetTop,
+                right: el1.offsetLeft + el1.offsetWidth,
+                bottom: el1.offsetTop + el1.offsetHeight,
+              };
+              const rect2 = {
+                left: el2.offsetLeft,
+                top: el2.offsetTop,
+                right: el2.offsetLeft + el2.offsetWidth,
+                bottom: el2.offsetTop + el2.offsetHeight,
+              };
+              const interLeft = Math.max(rect1.left, rect2.left);
+              const interTop = Math.max(rect1.top, rect2.top);
+              const interRight = Math.min(rect1.right, rect2.right);
+              const interBottom = Math.min(rect1.bottom, rect2.bottom);
+              if (interRight > interLeft && interBottom > interTop) {
+                const overlay = document.createElement("div");
+                overlay.className = "overlap-overlay";
+                overlay.style.left = interLeft + "px";
+                overlay.style.top = interTop + "px";
+                overlay.style.width = interRight - interLeft + "px";
+                overlay.style.height = interBottom - interTop + "px";
+                canvasElement.appendChild(overlay);
+              }
+            }
+          }
+        }
+
+        function updateActiveContainers() {
+          activeContainers.forEach((c) => {
+            const origW = parseFloat(c.element.dataset.width);
+            const origH = parseFloat(c.element.dataset.height);
+            if (c.element.dataset.rotated === "true") {
+              c.element.style.width = origH * scale + "px";
+              c.element.style.height = origW * scale + "px";
+            } else {
+              c.element.style.width = origW * scale + "px";
+              c.element.style.height = origH * scale + "px";
+            }
+            updateFontSize(c.element);
+          });
+        }
+        function updateFontSize(el) {
+          const MAX_FONT_SIZE = 16; // Set a maximum font size (adjust as needed)
+          const PADDING_PERCENT = 15; // Padding as percentage of container size
+
+          const w = el.offsetWidth;
+          const h = el.offsetHeight;
+
+          // Calculate available space for text (accounting for padding)
+          const availableWidth = w * (1 - PADDING_PERCENT / 100);
+          const availableHeight = h * (1 - PADDING_PERCENT / 100);
+
+          // Calculate font size based on container dimensions
+          // Use a more conservative scaling factor to keep text contained
+          let newSize = Math.min(availableWidth / 8, availableHeight / 6);
+
+          // Ensure font size stays within reasonable bounds
+          newSize = Math.max(Math.min(newSize, MAX_FONT_SIZE), 10);
+
+          const infoDiv = el.querySelector(".container-info");
+          if (infoDiv) {
+            infoDiv.style.fontSize = Math.floor(newSize) + "px";
+            // Add padding to keep text away from edges
+            infoDiv.style.padding = Math.floor((h * PADDING_PERCENT) / 200) + "px " + Math.floor((w * PADDING_PERCENT) / 200) + "px";
+          }
+        }
+        function getCurrentState() {
+          const canvasState = { width: canvasWidthInput.value, height: canvasHeightInput.value };
+          const containersState = activeContainers.map((c) => ({
+            paletteId: c.element.dataset.containerId,
+            left: parseFloat(c.element.style.left),
+            top: parseFloat(c.element.style.top),
+            rotated: c.element.dataset.rotated,
+          }));
+          return { canvas: canvasState, containers: containersState, templates: containers };
+        }
+        function saveState() {
+          if (isRestoring) return;
+          historyStack.push(getCurrentState());
+          redoStack = [];
+        }
+        function restoreState(state) {
+          isRestoring = true;
+          canvasWidthInput.value = state.canvas.width;
+          canvasHeightInput.value = state.canvas.height;
+          updateCanvas();
+          activeContainers.forEach((c) => {
+            canvasElement.removeChild(c.element);
+          });
+          activeContainers = [];
+          state.containers.forEach((cState) => {
+            const template = state.templates.find((item) => item.id == cState.paletteId);
+            if (template) {
+              addContainerToCanvas(template.id, cState.left, cState.top, cState.rotated);
+            }
+          });
+          containers = state.templates;
+          updateContainerList();
+          updateDistanceInfo();
+          isRestoring = false;
+        }
+        function undo() {
+          if (historyStack.length > 1) {
+            const current = historyStack.pop();
+            redoStack.push(current);
+            const prev = historyStack[historyStack.length - 1];
+            restoreState(prev);
+          }
+        }
+        function redo() {
+          if (redoStack.length > 0) {
+            const state = redoStack.pop();
+            historyStack.push(state);
+            restoreState(state);
+          }
+        }
+        function saveLayout() {
+          const data = getCurrentState();
+          localStorage.setItem("layoutData", JSON.stringify(data));
+          alert("布局已保存");
+        }
+        function loadLayout() {
+          const data = localStorage.getItem("layoutData");
+          if (data) {
+            restoreState(JSON.parse(data));
+            alert("布局已加载");
+          } else {
+            alert("无保存的布局数据");
+          }
+        }
+        addExampleContainers();
+        function addExampleContainers() {
+          containers.push(
+            { id: nextContainerId++, name: "侧开口大号（T）", width: 32, height: 15 },
+            { id: nextContainerId++, name: "侧开口小号（T）", width: 16.5, height: 16.5 },
+            { id: nextContainerId++, name: "收纳盒（T）", width: 15, height: 26 },
+            { id: nextContainerId++, name: "罐头收纳1格（T）", width: 12, height: 20 },
+            { id: nextContainerId++, name: "罐头收纳2格（T）", width: 20, height: 20 },
+            { id: nextContainerId++, name: "罐头收纳3格（T）", width: 29, height: 20 }
+          );
+          updateContainerList();
+        }
+        window.addEventListener("load", function () {
+          updateCanvas();
+        });
+      });
+    </script>
+  </body>
+</html>
