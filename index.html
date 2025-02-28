@@ -267,11 +267,11 @@
           <h3>画布设置</h3>
           <div class="form-group">
             <label for="canvas-width">画布宽度 (cm)</label>
-            <input type="number" id="canvas-width" min="1" step="0.1" value="63.5" />
+            <input type="number" id="canvas-width" min="1" step="0.1" value="43.5" />
           </div>
           <div class="form-group">
             <label for="canvas-height">画布高度 (cm)</label>
-            <input type="number" id="canvas-height" min="1" step="0.1" value="48.5" />
+            <input type="number" id="canvas-height" min="1" step="0.1" value="46" />
           </div>
           <div class="form-group button-group">
             <button id="update-canvas">更新画布</button>
@@ -1039,7 +1039,9 @@
             { id: nextContainerId++, name: "收纳盒（T）", width: 15, height: 26 },
             { id: nextContainerId++, name: "罐头收纳1格（T）", width: 12, height: 20 },
             { id: nextContainerId++, name: "罐头收纳2格（T）", width: 20, height: 20 },
-            { id: nextContainerId++, name: "罐头收纳3格（T）", width: 29, height: 20 }
+            { id: nextContainerId++, name: "罐头收纳3格（T）", width: 29, height: 20 },
+            { id: nextContainerId++, name: "收纳盒(高)（T）", width: 10, height: 25.5 },
+            { id: nextContainerId++, name: "收纳盒(矮)（T）", width: 10, height: 25.5 }
           );
           updateContainerList();
         }
